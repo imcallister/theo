@@ -1,4 +1,3 @@
-
 def get_words():
     with open("words.txt", "r") as words_file:
         lines = words_file.read().splitlines()
@@ -8,6 +7,7 @@ import random
 hangman_words = get_words()
 
 secret_word = hangman_words[random.randint(0,852)]
+secret_word = secret_word.lower()
 print ("welcome to hangman")
 player_name = input("What is your name? ")
 print ("hello", player_name)
@@ -26,7 +26,7 @@ while number_guesses < 11:
            progress[position] = guess
     number_guesses = number_guesses + 1
     if '_' in progress:
-        print("Sorry you're done")
+        print("Sorry")
     else:
         print ("Great job, you finished!")
         break
