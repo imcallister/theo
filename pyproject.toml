@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "theo"
+version = "0.1.0"
+description = ""
+authors = ["Ian McAllister <ian@mcallisternevins.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+jupyterlab = "^4.0.9"
+tk = "^0.1.0"
+tk-tools = "^0.16.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
