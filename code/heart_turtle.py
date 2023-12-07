@@ -1,0 +1,25 @@
+import turtle
+
+
+greg = turtle.Turtle()
+greg.goto(100,165)
+greg.goto(50,200)
+greg.goto(0,165)
+greg.goto(-50,200)
+greg.goto(-100,165)
+greg.goto(0,0)
+greg.goto(-25,-75)
+greg.goto(0,0)
+greg.goto(25,-75)
+greg.penup()
+greg.goto(10,-30)
+greg.pendown()
+greg.goto(-10,-30)
+greg.goto(-25,-75)
+greg.goto(-75,-75)
+greg.goto(-50,-75)
+greg.goto(-50,0)
+greg.goto(-25,0)
+greg.goto(-75,0)
+
+input("Press enter to exit")
