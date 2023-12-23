@@ -1,24 +1,35 @@
 import turtle
 
 
-def draw_flower_head(greg):
+def draw_flower_head(bob, line_color, fill_color, start_x, start_y):
 
-    greg.pendown()
+    bob.pendown()
 
-    greg.pencolor("red")
-    greg.fillcolor("yellow")
+    bob.pencolor(line_color)
+    bob.fillcolor(fill_color)
 
-    greg.begin_fill()
+    bob.goto(start_x, start_y)
+
+
+    bob.begin_fill()
 
     for i in range (8):
-        greg.forward(200)
-        greg.left(135)
+        bob.forward(200)
+        bob.left(135)
 
-    greg.penup()
+    bob.penup()
 
-    greg.end_fill()
+    bob.end_fill()
 
     return
+
+line_color = input("what color do you want the outline to be?")
+
+fill_color = input("what color do you want the inside to be?")
+
+start_x = float(input("What do you want the x to be?"))
+
+start_y = float(input("What do you want the y to be?"))
 
 greg = turtle.Turtle()
 
@@ -26,15 +37,15 @@ greg.penup()
 greg.speed("fastest")
 
 greg.goto(200,200)
-draw_flower_head(greg)
+draw_flower_head(greg, line_color, fill_color, start_x, start_y)
 
 greg.goto(-200,200)
-draw_flower_head(greg)
+draw_flower_head(greg, line_color, fill_color, start_x, start_y)
 
 greg.goto(-200,-200)
-draw_flower_head(greg)
+draw_flower_head(greg, line_color, fill_color, start_x, start_y)
 
 greg.goto(200,-200)
-draw_flower_head(greg)
+draw_flower_head(greg, line_color, fill_color, start_x, start_y)
 
 input("Press enter to exit")
