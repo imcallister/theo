@@ -19,6 +19,8 @@ def draw_flower_head(bob, line_color, fill_color, start_x, start_y):
 
     bob.penup()
 
+    bob.left(45)
+
     bob.end_fill()
 
     return
@@ -36,16 +38,22 @@ greg = turtle.Turtle()
 greg.penup()
 greg.speed("fastest")
 
-greg.goto(200,200)
+greg.right(90)
+greg.forward(200)
+greg.left(90)
+greg.forward(200)
 draw_flower_head(greg, line_color, fill_color, start_x, start_y)
 
-greg.goto(-200,200)
+greg.left(180)
+greg.forward(400)
 draw_flower_head(greg, line_color, fill_color, start_x, start_y)
 
-greg.goto(-200,-200)
+greg.right(90)
+greg.forward(400)
 draw_flower_head(greg, line_color, fill_color, start_x, start_y)
 
-greg.goto(200,-200)
+greg.right(90)
+greg.forward(400)
 draw_flower_head(greg, line_color, fill_color, start_x, start_y)
 
 input("Press enter to exit")
