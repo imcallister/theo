@@ -1,15 +1,27 @@
 import turtle
 
+Flower_Colors = [
+    {'pen_color': 'red', 'fill_color': 'blue', 'start_x': 250, 'start_y': 200},
+    {'pen_color': 'pink', 'fill_color': 'green', 'start_x': -200, 'start_y': 200},
+    {'pen_color': 'black', 'fill_color': 'pink', 'start_x': 200, 'start_y': -100},
+    {'pen_color': 'black', 'fill_color': 'orange', 'start_x': -200, 'start_y': -200},
+    {'pen_color': 'pink', 'fill_color': 'black', 'start_x': 100, 'start_y': -75},
+    {'pen_color': 'yellow', 'fill_color': 'grey', 'start_x': -100, 'start_y': 100},
+    {'pen_color': 'pink', 'fill_color': 'blue', 'start_x': -300, 'start_y': -75},
+    {'pen_color': 'purple', 'fill_color': 'purple', 'start_x': 150, 'start_y': 100},
+    {'pen_color': 'pink', 'fill_color': 'red', 'start_x': 500, 'start_y': -75},
+    {'pen_color': 'purple', 'fill_color': 'yellow', 'start_x': -150, 'start_y': -200},
+    {'pen_color': 'purple', 'fill_color': 'orange', 'start_x': -100, 'start_y': -150},
+]
 
 def draw_flower_head(bob, line_color, fill_color, start_x, start_y):
 
+    bob.goto(start_x , start_y)
+    bob.setheading(0)
     bob.pendown()
 
     bob.pencolor(line_color)
     bob.fillcolor(fill_color)
-
-    bob.goto(start_x, start_y)
-
 
     bob.begin_fill()
 
@@ -18,42 +30,18 @@ def draw_flower_head(bob, line_color, fill_color, start_x, start_y):
         bob.left(135)
 
     bob.penup()
-
-    bob.left(45)
-
+    bob.setheading(0)
     bob.end_fill()
 
     return
 
-line_color = input("what color do you want the outline to be?")
-
-fill_color = input("what color do you want the inside to be?")
-
-start_x = float(input("What do you want the x to be?"))
-
-start_y = float(input("What do you want the y to be?"))
 
 greg = turtle.Turtle()
 
 greg.penup()
 greg.speed("fastest")
 
-greg.right(90)
-greg.forward(200)
-greg.left(90)
-greg.forward(200)
-draw_flower_head(greg, line_color, fill_color, start_x, start_y)
-
-greg.left(180)
-greg.forward(400)
-draw_flower_head(greg, line_color, fill_color, start_x, start_y)
-
-greg.right(90)
-greg.forward(400)
-draw_flower_head(greg, line_color, fill_color, start_x, start_y)
-
-greg.right(90)
-greg.forward(400)
-draw_flower_head(greg, line_color, fill_color, start_x, start_y)
+for flower_info in Flower_Colors:
+    draw_flower_head(greg, flower_info['pen_color'], flower_info['fill_color'], flower_info['start_x'], flower_info['start_y'])
 
 input("Press enter to exit")
