@@ -4,12 +4,11 @@ main_dir = os.path.split(os.path.abspath(__file__))[0]
 # import basic pygame modules
 import pygame as pg
 
-
 SCREENRECT = pg.Rect(0, 0, 1280, 960)
 BLACK = (  0,   0,   0)
 WHITE = (255, 255, 255)
 RED   = (255,   0,   0)
-
+GREEN = (0, 255, 0)
 
 def load_image(file):
     """loads an image, prepares it for play"""
@@ -23,7 +22,7 @@ def load_image(file):
 
 class BouncingBall(pg.sprite.Sprite):
 
-    speed = 10
+    speed = 0
 
     def __init__(self):
         pg.sprite.Sprite.__init__(self)
@@ -33,7 +32,7 @@ class BouncingBall(pg.sprite.Sprite):
         self.rect.center = (640,480)
 
     def move(self):
-        self.rect.move_ip(self.speed, 0)
+        self.rect.move_ip(self.speed, 10)
         self.rect = self.rect.clamp(SCREENRECT)
         
 
@@ -54,6 +53,8 @@ def main():
     all_sprites_list = pg.sprite.Group()
     all_sprites_list.add(ball)
 
+    background = WHITE
+
     # -------- Main Program Loop -----------
     while alive:
         for event in pg.event.get():
@@ -61,10 +62,13 @@ def main():
                 return
             if event.type == pg.KEYDOWN and event.key == pg.K_ESCAPE:
                 return
+            if event.type == pg.KEYDOWN and event.key == pg.K_q:
+                return
         
+
         # Clear the screen
-        screen.fill(BLACK)
-        
+        #screen.fill(GREEN)
+
         # Draw all the spites
         all_sprites_list.draw(screen)
         # Go ahead and update the screen with what we've drawn.
