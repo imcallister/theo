@@ -29,7 +29,7 @@ class Block(pg.sprite.Sprite):
         and its size. """
  
         # Call the parent class (Sprite) constructor
-        super().__init__()
+        pg.sprite.Sprite.__init__(self)
  
         self.image = pg.Surface([width, height])
         self.image.fill(color)
@@ -42,6 +42,7 @@ def main():
 
     clock = pg.time.Clock()
     
+    # Set the display mode
     screen = pg.display.set_mode(SCREENRECT.size)
     
     # This is a list of 'sprites.' Each block in the program is
@@ -68,10 +69,7 @@ def main():
     player = Block(RED, 20, 15)
     all_sprites_list.add(player)
     
-    # Loop until the user clicks the close button.
     alive = True
-    
-    # Used to manage how fast the screen updates
     score = 0
     
     # -------- Main Program Loop -----------
@@ -80,6 +78,8 @@ def main():
             if event.type == pg.QUIT:
                 return
             if event.type == pg.KEYDOWN and event.key == pg.K_ESCAPE:
+                return
+            if event.type == pg.KEYDOWN and event.key == pg.K_q:
                 return
     
         # Clear the screen
@@ -101,14 +101,15 @@ def main():
         # Check the list of collisions.
         for block in blocks_hit_list:
             score += 1
-            print(score)
+            print(f'Score is: {score}')
     
         # Draw all the spites
         all_sprites_list.draw(screen)
         # Go ahead and update the screen with what we've drawn.
         pg.display.flip()
-        # Limit to 60 frames per second
-        clock.tick(60)
+        
+        # cap the framerate at 40fps. Also called 40HZ or 40 times per second.
+        clock.tick(40)
     
 # call the "main" function if running this script
 if __name__ == "__main__":

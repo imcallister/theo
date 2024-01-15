@@ -53,8 +53,7 @@ def main():
     all_sprites_list = pg.sprite.Group()
     all_sprites_list.add(ball)
 
-    background = WHITE
-
+    
     # -------- Main Program Loop -----------
     while alive:
         for event in pg.event.get():
@@ -67,7 +66,7 @@ def main():
         
 
         # Clear the screen
-        #screen.fill(GREEN)
+        screen.fill(GREEN)
 
         # Draw all the spites
         all_sprites_list.draw(screen)
