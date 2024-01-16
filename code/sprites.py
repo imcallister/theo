@@ -17,7 +17,8 @@ SCREENRECT = pg.Rect(0, 0, 700, 400)
 BLACK = (  0,   0,   0)
 WHITE = (255, 255, 255)
 RED   = (255,   0,   0)
- 
+GREEN = (  0, 255,   0)
+
 class Block(pg.sprite.Sprite):
     """
     This class represents the ball.
@@ -55,7 +56,7 @@ def main():
     
     for i in range(50):
         # This represents a block
-        block = Block(BLACK, 20, 15)
+        block = Block(GREEN, 10, 7.5)
     
         # Set a random location for the block
         block.rect.x = random.randrange(SCREENRECT.size[0])
