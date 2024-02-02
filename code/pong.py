@@ -4,6 +4,8 @@ SCREEN = pg.display.set_mode((0,0), pg.FULLSCREEN)
 
 screen_boundary = SCREEN.get_rect()
 
+score = 0
+
 class Paddle(pg.sprite.Sprite):
 
     speed = 0
@@ -37,9 +39,6 @@ class Paddle(pg.sprite.Sprite):
 
 class Ball(pg.sprite.Sprite):
 
-    
-    speed = 0
-
     def __init__(self, color, width, height, start_x, start_y):
 
         pg.sprite.Sprite.__init__(self)
@@ -56,15 +55,11 @@ class Ball(pg.sprite.Sprite):
         self.speed_y = 10
 
 
-            
-
     def move(self):
         current_x = self.rect.x
         current_y = self.rect.y
 
         hit_l_wall = hit_r_wall = hit_t_wall = hit_b_wall = False
-
-        
 
         if current_x == 0: 
             hit_l_wall = True
@@ -80,7 +75,7 @@ class Ball(pg.sprite.Sprite):
 
 
         if hit_t_wall == True:
-            self.speed_y = -self.speed_y
+            self.speed_y = -self.speed_y 
 
 
         if hit_b_wall == True:
@@ -95,6 +90,7 @@ class Ball(pg.sprite.Sprite):
                     
         self.rect.y = current_y + self.speed_y
         self.rect.x = current_x + self.speed_x
+
 
 BLACK = (  0,  0,  0)
 
@@ -113,6 +109,8 @@ game_on = True
 def main():
     pg.init()
     
+    score = 0
+
     lkey_down = False
 
     rkey_down = False
@@ -157,12 +155,15 @@ def main():
                 rkey_down = True
 
             if event.type == pg.KEYUP and event.key == pg.K_RIGHT:
-                rkey_down = False 
+                rkey_down = False
+            
 
-        
    
         SCREEN.fill(BLACK)
         all_sprites_list.draw(SCREEN)
+        score_font = pg.font.SysFont("Times New Roman", 30)
+        label1 = score_font.render("Score "+str(score), 1, (255,255,0))
+        SCREEN.blit(label1, (720,450))
         pg.display.flip()
         clock.tick(40)
 
