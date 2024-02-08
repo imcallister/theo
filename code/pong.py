@@ -24,7 +24,6 @@ class Paddle(pg.sprite.Sprite):
         current_x = self.rect.x
 
         if self.rect.left > 0:
-
             self.rect.x = current_x - 20
         
 
@@ -32,8 +31,7 @@ class Paddle(pg.sprite.Sprite):
         current_x = self.rect.x
                 
         if self.rect.right < 1440:
-
-                self.rect.x = current_x + 20
+            self.rect.x = current_x + 20
 
            
 
@@ -43,7 +41,8 @@ class Ball(pg.sprite.Sprite):
 
         pg.sprite.Sprite.__init__(self)
 
-        
+        self.hitting_ball = False
+
         self.image = pg.Surface([width, height])
         self.image.fill(color)
         self.rect = self.image.get_rect()
@@ -54,13 +53,20 @@ class Ball(pg.sprite.Sprite):
         self.speed_x = 10
         self.speed_y = 10
 
+        
 
     def move(self):
         current_x = self.rect.x
         current_y = self.rect.y
 
+        # if a bit of code is greyed out like hit_b_wall then its a hint
+        # from Visual Studio that the variable is not being used
+        # check if you can delete some code
         hit_l_wall = hit_r_wall = hit_t_wall = hit_b_wall = False
 
+        # the code below is much more verbose than it needs to be
+        # see if you can combine the two sections of setting all the hit_walls
+        # and checking if the hit_walls are True into less lines of code
         if current_x == 0: 
             hit_l_wall = True
             
@@ -77,9 +83,6 @@ class Ball(pg.sprite.Sprite):
         if hit_t_wall == True:
             self.speed_y = -self.speed_y 
 
-
-        if hit_b_wall == True:
-            self.speed_y = -self.speed_y
 
         if hit_r_wall == True:
             self.speed_x = -self.speed_x
@@ -129,7 +132,42 @@ def main():
     
     all_sprites_list.add(ball1)
 
-    while game_on:
+    while ball_alive:
+ 
+        # check for collision of ball with paddle
+        ball_x = ball1.rect.x
+        ball_y = ball1.rect.y
+        paddle_x = paddle1.rect.x
+        
+        # the gap between 850 and 900 seems quite large
+        # it might result in the ball bouncing when its too high above paddle
+        # or below the paddle.
+        # Can you narrow down the range a bit? Or decide it doesn't matter
+        if ball_y >=850 and ball_y <=900:
+            # check if its hitting paddle
+            if ball_x >= paddle_x - 52.5 and ball_x <= paddle_x + 52.5:
+
+                if ball1.hitting_ball == False:
+                # ball has hit the paddle
+                    score += 1
+                    ball1.speed_y = -ball1.speed_y
+                    ball1.hitting_ball = True
+
+        if ball_x == 1440:
+            ball1.hitting_ball = False
+
+        if ball_x == 0:
+            ball1.hitting_ball = False
+
+        if ball_y == 0:
+            ball1.hitting_ball = False
+        
+        if ball_y == 900:
+            ball_alive = False
+
+        # what does this do?
+        if ball_y >= 860:
+            ball1.hitting_ball = False
 
         if ball_alive == True:
             ball1.move()
