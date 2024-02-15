@@ -1,10 +1,6 @@
 import pygame as pg
 
-SCREEN = pg.display.set_mode((0,0), pg.FULLSCREEN)
 
-screen_boundary = SCREEN.get_rect()
-
-score = 0
 
 class Paddle(pg.sprite.Sprite):
 
@@ -47,11 +43,10 @@ class Ball(pg.sprite.Sprite):
         self.image.fill(color)
         self.rect = self.image.get_rect()
 
-        self.rect.x = start_x
-        self.rect.y = start_y
+        self.rect.center = (start_x, start_y)
 
         self.speed_x = 10
-        self.speed_y = 10
+        self.speed_y = -10
 
         
 
@@ -112,40 +107,59 @@ game_on = True
 def main():
     pg.init()
     
+    SCREEN = pg.display.set_mode((0,0), pg.FULLSCREEN)
+    screen_boundary = SCREEN.get_rect()
+    screen_width = screen_boundary.width
+    screen_height = screen_boundary.height
+    
+    ball_start_x = round(screen_width * .5, -1)
+    ball_start_y = round(screen_height * .5, -1)
+
+    ball_width = 15
+    ball_height = 15
+
+    paddle_width = 110
+    paddle_height = 15
+
+    paddle_start_x = round(screen_width * .5, -1)
+    paddle_start_y = screen_height - 2.5 * paddle_height
+
     score = 0
 
     lkey_down = False
-
     rkey_down = False
 
     ball_alive = True
 
-    paddle1 = Paddle(WHITE, 110, 15, 670, 870)    
+    paddle1 = Paddle(WHITE, paddle_width, paddle_height, paddle_start_x, paddle_start_y)    
+    ball1 = Ball(WHITE, ball_width, ball_height, ball_start_x, ball_start_y)
 
     clock = pg.time.Clock()
 
     all_sprites_list = pg.sprite.Group()  
-    all_sprites_list.add(paddle1)
-
-    ball1 = Ball(WHITE, 15, 15, 720, 450)
-
-    
+    all_sprites_list.add(paddle1)    
     all_sprites_list.add(ball1)
 
     while ball_alive:
  
         # check for collision of ball with paddle
-        ball_x = ball1.rect.x
+        ball_x = ball1.rect.centerx
+        ball_right = ball1.rect.right
+        ball_left = ball1.rect.left
         ball_y = ball1.rect.y
-        paddle_x = paddle1.rect.x
+        paddle_x = paddle1.rect.centerx
+        paddle_left = paddle1.rect.left
+        paddle_right = paddle1.rect.right
         
         # the gap between 850 and 900 seems quite large
         # it might result in the ball bouncing when its too high above paddle
         # or below the paddle.
         # Can you narrow down the range a bit? Or decide it doesn't matter
-        if ball_y >=850 and ball_y <=900:
+        print('Ball:', ball_x, ball_y, 'Hitting', ball1.hitting_ball, 'Paddle x', paddle_x, 'Paddle center', paddle1.rect.center)
+
+        if ball_y >=paddle_start_y - paddle_height * .5 and ball_y <= paddle_start_y + paddle_height * .5:
             # check if its hitting paddle
-            if ball_x >= paddle_x - 52.5 and ball_x <= paddle_x + 52.5:
+            if ball_right >= paddle_left and ball_left <= paddle_right:
 
                 if ball1.hitting_ball == False:
                 # ball has hit the paddle
@@ -153,21 +167,17 @@ def main():
                     ball1.speed_y = -ball1.speed_y
                     ball1.hitting_ball = True
 
-        if ball_x == 1440:
+        if ball_x >= screen_width:
             ball1.hitting_ball = False
 
-        if ball_x == 0:
+        if ball_x <= 0:
             ball1.hitting_ball = False
 
-        if ball_y == 0:
+        if ball_y <= 0:
             ball1.hitting_ball = False
         
-        if ball_y == 900:
+        if ball_y >= screen_height:
             ball_alive = False
-
-        # what does this do?
-        if ball_y >= 860:
-            ball1.hitting_ball = False
 
         if ball_alive == True:
             ball1.move()
