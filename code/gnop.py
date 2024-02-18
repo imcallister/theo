@@ -116,16 +116,14 @@ class GameScreen:
 
 def check_collision(ball, paddle):
     # check for collision of ball with paddle
-    ball_x = ball.rect.centerx
     ball_right = ball.rect.right
     ball_left = ball.rect.left
     ball_y = ball.rect.y
-    paddle_x = paddle.rect.centerx
     paddle_y = paddle.rect.centery
     paddle_left = paddle.rect.left
     paddle_right = paddle.rect.right
     
-    print('Ball:', ball_x, ball_y, 'Hitting', ball.hitting_ball, 'Paddle x', paddle_x, 'Paddle center', paddle.rect.center)
+    print('Ball:', ball.rect.center, ' Hitting:', ball.hitting_ball, 'Paddle center', paddle.rect.center)
 
     if ball_y >= paddle_y - paddle.height * .5 and ball_y <= paddle_y + paddle.height * .5:
         # ball is at height of paddle so check if hitting paddle
