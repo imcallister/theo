@@ -68,7 +68,8 @@ class Ball(pg.sprite.Sprite):
             self.speed_x = -self.speed_x
             
         if current_y <= 0:
-            self.speed_y = -self.speed_y    
+            self.speed_y = -self.speed_y
+            
                     
         self.rect.y = current_y + self.speed_y
         self.rect.x = current_x + self.speed_x
