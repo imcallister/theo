@@ -1,12 +1,17 @@
 import pygame as pg
 
+BLACK = (  0,  0,  0)
+WHITE = (255, 255, 255)
+RED = (255,   0,   0)
+GREEN = (  0, 255,  0)
+BLUE = (255, 255, 255)
 
 
 class Paddle(pg.sprite.Sprite):
 
     speed = 0
 
-    def __init__(self, color, width, height, start_x, start_y):
+    def __init__(self, color, width, height, start_x, start_y, width_of_screen):
 
         pg.sprite.Sprite.__init__(self)
 
@@ -15,6 +20,8 @@ class Paddle(pg.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = start_x
         self.rect.y = start_y
+
+        self.width_of_screen = width_of_screen
 
     def move_left(self):
         current_x = self.rect.x
@@ -26,14 +33,15 @@ class Paddle(pg.sprite.Sprite):
     def move_right(self):
         current_x = self.rect.x
                 
-        if self.rect.right < 1440:
+        if self.rect.right < self.width_of_screen:
             self.rect.x = current_x + 20
+        
 
            
 
 class Ball(pg.sprite.Sprite):
 
-    def __init__(self, color, width, height, start_x, start_y):
+    def __init__(self, color, width, height, start_x, start_y, width_of_screen, height_of_screen):
 
         pg.sprite.Sprite.__init__(self)
 
@@ -48,60 +56,23 @@ class Ball(pg.sprite.Sprite):
         self.speed_x = 10
         self.speed_y = -10
 
+        self.width_of_screen = width_of_screen
+        self.length_of_screen = height_of_screen
         
 
     def move(self):
         current_x = self.rect.x
         current_y = self.rect.y
 
-        # if a bit of code is greyed out like hit_b_wall then its a hint
-        # from Visual Studio that the variable is not being used
-        # check if you can delete some code
-        hit_l_wall = hit_r_wall = hit_t_wall = hit_b_wall = False
-
-        # the code below is much more verbose than it needs to be
-        # see if you can combine the two sections of setting all the hit_walls
-        # and checking if the hit_walls are True into less lines of code
-        if current_x == 0: 
-            hit_l_wall = True
-            
-        if current_x == 1440: 
-            hit_r_wall = True
-            
-        if current_y == 0: 
-            hit_t_wall = True
-            
-        if current_y == 900: 
-            hit_b_wall = True
-
-
-        if hit_t_wall == True:
-            self.speed_y = -self.speed_y 
-
-
-        if hit_r_wall == True:
+        if current_x <= 0 or current_x >= self.width_of_screen: 
             self.speed_x = -self.speed_x
-        
-        if hit_l_wall == True:
-            self.speed_x = -self.speed_x
-
+            
+        if current_y <= 0:
+            self.speed_y = -self.speed_y
+            
                     
         self.rect.y = current_y + self.speed_y
         self.rect.x = current_x + self.speed_x
-
-
-BLACK = (  0,  0,  0)
-
-WHITE = (255, 255, 255)
-
-RED = (255,   0,   0)
-
-GREEN = (  0, 255,  0)
-
-BLUE = (255, 255, 255)
-
-game_on = True
-
 
 
 def main():
@@ -131,8 +102,8 @@ def main():
 
     ball_alive = True
 
-    paddle1 = Paddle(WHITE, paddle_width, paddle_height, paddle_start_x, paddle_start_y)    
-    ball1 = Ball(WHITE, ball_width, ball_height, ball_start_x, ball_start_y)
+    paddle1 = Paddle(WHITE, paddle_width, paddle_height, paddle_start_x, paddle_start_y, screen_width)    
+    ball1 = Ball(WHITE, ball_width, ball_height, ball_start_x, ball_start_y, screen_width, screen_height)
 
     clock = pg.time.Clock()
 
@@ -151,10 +122,6 @@ def main():
         paddle_left = paddle1.rect.left
         paddle_right = paddle1.rect.right
         
-        # the gap between 850 and 900 seems quite large
-        # it might result in the ball bouncing when its too high above paddle
-        # or below the paddle.
-        # Can you narrow down the range a bit? Or decide it doesn't matter
         print('Ball:', ball_x, ball_y, 'Hitting', ball1.hitting_ball, 'Paddle x', paddle_x, 'Paddle center', paddle1.rect.center)
 
         if ball_y >=paddle_start_y - paddle_height * .5 and ball_y <= paddle_start_y + paddle_height * .5:
