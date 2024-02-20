@@ -1,395 +1,427 @@
-#!/usr/bin/env python
-""" pygame.examples.aliens
-
-Shows a mini game where you have to defend against aliens.
-
-What does it show you about pygame?
-
-* pg.sprite, the difference between Sprite and Group.
-* dirty rectangle optimization for processing for speed.
-* music with pg.mixer.music, including fadeout
-* sound effects with pg.Sound
-* event processing, keyboard handling, QUIT handling.
-* a main loop frame limited with a game clock from pg.time.Clock
-* fullscreen switching.
-
-
-Controls
---------
-
-* Left and right arrows to move.
-* Space bar to shoot
-* f key to toggle between fullscreen.
-
-"""
-
-import os
-import random
-from typing import List
-
-# import basic pygame modules
-import pygame as pg
-
-# see if we can load more than standard BMP
-if not pg.image.get_extended():
-    raise SystemExit("Sorry, extended image module required")
-
-
-# game constants
-MAX_SHOTS = 2  # most player bullets onscreen
-ALIEN_ODDS = 22  # chances a new alien appears
-BOMB_ODDS = 60  # chances a new bomb will drop
-ALIEN_RELOAD = 12  # frames between new aliens
-SCREENRECT = pg.Rect(0, 0, 640, 480)
-SCORE = 0
-
-main_dir = os.path.split(os.path.abspath(__file__))[0]
-
-
-def load_image(file):
-    """loads an image, prepares it for play"""
-    file = os.path.join(main_dir, "data", file)
-    try:
-        surface = pg.image.load(file)
-    except pg.error:
-        raise SystemExit(f'Could not load image "{file}" {pg.get_error()}')
-    return surface.convert()
-
-
-def load_sound(file):
-    """because pygame can be compiled without mixer."""
-    if not pg.mixer:
-        return None
-    file = os.path.join(main_dir, "data", file)
-    try:
-        sound = pg.mixer.Sound(file)
-        return sound
-    except pg.error:
-        print(f"Warning, unable to load, {file}")
-    return None
-
-
-# Each type of game object gets an init and an update function.
-# The update function is called once per frame, and it is when each object should
-# change its current position and state.
-#
-# The Player object actually gets a "move" function instead of update,
-# since it is passed extra information about the keyboard.
-
-
-class Player(pg.sprite.Sprite):
-    """Representing the player as a moon buggy type car."""
-
-    speed = 10
-    bounce = 24
-    gun_offset = -11
-    images: List[pg.Surface] = []
-
-    def __init__(self, *groups):
-        pg.sprite.Sprite.__init__(self, *groups)
-        self.image = self.images[0]
-        self.rect = self.image.get_rect(midbottom=SCREENRECT.midbottom)
-        self.reloading = 0
-        self.origtop = self.rect.top
-        self.facing = -1
-
-    def move(self, direction):
-        if direction:
-            self.facing = direction
-        self.rect.move_ip(direction * self.speed, 0)
-        self.rect = self.rect.clamp(SCREENRECT)
-        if direction < 0:
-            self.image = self.images[0]
-        elif direction > 0:
-            self.image = self.images[1]
-        self.rect.top = self.origtop - (self.rect.left // self.bounce % 2)
-
-    def gunpos(self):
-        pos = self.facing * self.gun_offset + self.rect.centerx
-        return pos, self.rect.top
-
-
-class Alien(pg.sprite.Sprite):
-    """An alien space ship. That slowly moves down the screen."""
-
-    speed = 13
-    animcycle = 12
-    images: List[pg.Surface] = []
-
-    def __init__(self, *groups):
-        pg.sprite.Sprite.__init__(self, *groups)
-        self.image = self.images[0]
-        self.rect = self.image.get_rect()
-        self.facing = random.choice((-1, 1)) * Alien.speed
-        self.frame = 0
-        if self.facing < 0:
-            self.rect.right = SCREENRECT.right
-
-    def update(self):
-        self.rect.move_ip(self.facing, 0)
-        if not SCREENRECT.contains(self.rect):
-            self.facing = -self.facing
-            self.rect.top = self.rect.bottom + 1
-            self.rect = self.rect.clamp(SCREENRECT)
-        self.frame = self.frame + 1
-        self.image = self.images[self.frame // self.animcycle % 3]
-
-
-class Explosion(pg.sprite.Sprite):
-    """An explosion. Hopefully the Alien and not the player!"""
-
-    defaultlife = 12
-    animcycle = 3
-    images: List[pg.Surface] = []
-
-    def __init__(self, actor, *groups):
-        pg.sprite.Sprite.__init__(self, *groups)
-        self.image = self.images[0]
-        self.rect = self.image.get_rect(center=actor.rect.center)
-        self.life = self.defaultlife
-
-    def update(self):
-        """called every time around the game loop.
-
-        Show the explosion surface for 'defaultlife'.
-        Every game tick(update), we decrease the 'life'.
-
-        Also we animate the explosion.
-        """
-        self.life = self.life - 1
-        self.image = self.images[self.life // self.animcycle % 2]
-        if self.life <= 0:
-            self.kill()
-
-
-class Shot(pg.sprite.Sprite):
-    """a bullet the Player sprite fires."""
-
-    speed = -11
-    images: List[pg.Surface] = []
-
-    def __init__(self, pos, *groups):
-        pg.sprite.Sprite.__init__(self, *groups)
-        self.image = self.images[0]
-        self.rect = self.image.get_rect(midbottom=pos)
-
-    def update(self):
-        """called every time around the game loop.
-
-        Every tick we move the shot upwards.
-        """
-        self.rect.move_ip(0, self.speed)
-        if self.rect.top <= 0:
-            self.kill()
-
-
-class Bomb(pg.sprite.Sprite):
-    """A bomb the aliens drop."""
-
-    speed = 9
-    images: List[pg.Surface] = []
-
-    def __init__(self, alien, explosion_group, *groups):
-        pg.sprite.Sprite.__init__(self, *groups)
-        self.image = self.images[0]
-        self.rect = self.image.get_rect(midbottom=alien.rect.move(0, 5).midbottom)
-        self.explosion_group = explosion_group
-
-    def update(self):
-        """called every time around the game loop.
-
-        Every frame we move the sprite 'rect' down.
-        When it reaches the bottom we:
-
-        - make an explosion.
-        - remove the Bomb.
-        """
-        self.rect.move_ip(0, self.speed)
-        if self.rect.bottom >= 470:
-            Explosion(self, self.explosion_group)
-            self.kill()
-
-
-class Score(pg.sprite.Sprite):
-    """to keep track of the score."""
-
-    def __init__(self, *groups):
-        pg.sprite.Sprite.__init__(self, *groups)
-        self.font = pg.font.Font(None, 20)
-        self.font.set_italic(1)
-        self.color = "white"
-        self.lastscore = -1
-        self.update()
-        self.rect = self.image.get_rect().move(10, 450)
-
-    def update(self):
-        """We only update the score in update() when it has changed."""
-        if SCORE != self.lastscore:
-            self.lastscore = SCORE
-            msg = f"Score: {SCORE}"
-            self.image = self.font.render(msg, 0, self.color)
-
-
-def main(winstyle=0):
-    # Initialize pygame
-    if pg.get_sdl_version()[0] == 2:
-        pg.mixer.pre_init(44100, 32, 2, 1024)
-    pg.init()
-    if pg.mixer and not pg.mixer.get_init():
-        print("Warning, no sound")
-        pg.mixer = None
-
-    fullscreen = False
-    # Set the display mode
-    winstyle = 0  # |FULLSCREEN
-    bestdepth = pg.display.mode_ok(SCREENRECT.size, winstyle, 32)
-    screen = pg.display.set_mode(SCREENRECT.size, winstyle, bestdepth)
-
-    # Load images, assign to sprite classes
-    # (do this before the classes are used, after screen setup)
-    img = load_image("player1.gif")
-    Player.images = [img, pg.transform.flip(img, 1, 0)]
-    img = load_image("explosion1.gif")
-    Explosion.images = [img, pg.transform.flip(img, 1, 1)]
-    Alien.images = [load_image(im) for im in ("alien1.gif", "alien2.gif", "alien3.gif")]
-    Bomb.images = [load_image("bomb.gif")]
-    Shot.images = [load_image("shot.gif")]
-
-    # decorate the game window
-    icon = pg.transform.scale(Alien.images[0], (32, 32))
-    pg.display.set_icon(icon)
-    pg.display.set_caption("Pygame Aliens")
-    pg.mouse.set_visible(0)
-
-    # create the background, tile the bgd image
-    bgdtile = load_image("background.gif")
-    background = pg.Surface(SCREENRECT.size)
-    for x in range(0, SCREENRECT.width, bgdtile.get_width()):
-        background.blit(bgdtile, (x, 0))
-    screen.blit(background, (0, 0))
-    pg.display.flip()
-
-    # load the sound effects
-    boom_sound = load_sound("boom.wav")
-    shoot_sound = load_sound("car_door.wav")
-    if pg.mixer:
-        music = os.path.join(main_dir, "data", "house_lo.wav")
-        pg.mixer.music.load(music)
-        pg.mixer.music.play(-1)
-
-    # Initialize Game Groups
-    aliens = pg.sprite.Group()
-    shots = pg.sprite.Group()
-    bombs = pg.sprite.Group()
-    all = pg.sprite.RenderUpdates()
-    lastalien = pg.sprite.GroupSingle()
-
-    # Create Some Starting Values
-    alienreload = ALIEN_RELOAD
-    clock = pg.time.Clock()
-
-    # initialize our starting sprites
-    global SCORE
-    player = Player(all)
-    Alien(
-        aliens, all, lastalien
-    )  # note, this 'lives' because it goes into a sprite group
-    if pg.font:
-        all.add(Score(all))
-
-    # Run our main loop whilst the player is alive.
-    while player.alive():
-        # get input
-        for event in pg.event.get():
-            if event.type == pg.QUIT:
-                return
-            if event.type == pg.KEYDOWN and event.key == pg.K_ESCAPE:
-                return
-            if event.type == pg.KEYDOWN:
-                if event.key == pg.K_f:
-                    if not fullscreen:
-                        print("Changing to FULLSCREEN")
-                        screen_backup = screen.copy()
-                        screen = pg.display.set_mode(
-                            SCREENRECT.size, winstyle | pg.FULLSCREEN, bestdepth
-                        )
-                        screen.blit(screen_backup, (0, 0))
-                    else:
-                        print("Changing to windowed mode")
-                        screen_backup = screen.copy()
-                        screen = pg.display.set_mode(
-                            SCREENRECT.size, winstyle, bestdepth
-                        )
-                        screen.blit(screen_backup, (0, 0))
-                    pg.display.flip()
-                    fullscreen = not fullscreen
-
-        keystate = pg.key.get_pressed()
-
-        # clear/erase the last drawn sprites
-        all.clear(screen, background)
-
-        # update all the sprites
-        all.update()
-
-        # handle player input
-        direction = keystate[pg.K_RIGHT] - keystate[pg.K_LEFT]
-        player.move(direction)
-        firing = keystate[pg.K_SPACE]
-        if not player.reloading and firing and len(shots) < MAX_SHOTS:
-            Shot(player.gunpos(), shots, all)
-            if pg.mixer and shoot_sound is not None:
-                shoot_sound.play()
-        player.reloading = firing
-
-        # Create new alien
-        if alienreload:
-            alienreload = alienreload - 1
-        elif not int(random.random() * ALIEN_ODDS):
-            Alien(aliens, all, lastalien)
-            alienreload = ALIEN_RELOAD
-
-        # Drop bombs
-        if lastalien and not int(random.random() * BOMB_ODDS):
-            Bomb(lastalien.sprite, all, bombs, all)
-
-        # Detect collisions between aliens and players.
-        for alien in pg.sprite.spritecollide(player, aliens, 1):
-            if pg.mixer and boom_sound is not None:
-                boom_sound.play()
-            Explosion(alien, all)
-            Explosion(player, all)
-            SCORE = SCORE + 1
-            player.kill()
-
-        # See if shots hit the aliens.
-        for alien in pg.sprite.groupcollide(aliens, shots, 1, 1).keys():
-            if pg.mixer and boom_sound is not None:
-                boom_sound.play()
-            Explosion(alien, all)
-            SCORE = SCORE + 1
-
-        # See if alien bombs hit the player.
-        for bomb in pg.sprite.spritecollide(player, bombs, 1):
-            if pg.mixer and boom_sound is not None:
-                boom_sound.play()
-            Explosion(player, all)
-            Explosion(bomb, all)
-            player.kill()
-
-        # draw the scene
-        dirty = all.draw(screen)
-        pg.display.update(dirty)
-
-        # cap the framerate at 40fps. Also called 40HZ or 40 times per second.
-        clock.tick(40)
-
-    if pg.mixer:
-        pg.mixer.music.fadeout(1000)
-    pg.time.wait(1000)
-
-
-# call the "main" function if running this script
-if __name__ == "__main__":
-    main()
-    pg.quit()
+import pygame
+import levels
+from levels import *
+
+pygame.init()
+
+# set up pygame game
+WIDTH = 1800
+HEIGHT = 900
+TILE_SIZE = 100
+screen = pygame.display.set_mode([WIDTH, HEIGHT])
+pygame.display.set_caption('Space Platformer')
+fps = 60
+timer = pygame.time.Clock()
+counting = pygame.time.Clock()
+# font = pygame.font.Font('freesansbold.ttf', 20)
+active_level = 2
+active_phase = 3
+level = levels[active_level][active_phase]
+# load images
+bg = pygame.image.load('assets/images/space bg.png')
+rock = pygame.transform.scale(pygame.image.load('assets/images/tiles/rock.png'), (100, 100))
+ground = pygame.transform.scale(pygame.image.load('assets/images/tiles/ground.png'), (100, 100))
+platform = pygame.transform.scale(pygame.image.load('assets/images/tiles/platform.png'), (100, 50))
+acid = pygame.transform.scale(pygame.image.load('assets/images/tiles/acid2.png'), (100, 25))
+blue_key = pygame.transform.scale(pygame.image.load('assets/images/keycards/key_blue.png'), (60, 100))
+green_key = pygame.transform.scale(pygame.image.load('assets/images/keycards/key_green.png'), (60, 100))
+red_key = pygame.transform.scale(pygame.image.load('assets/images/keycards/key_red.png'), (60, 100))
+yellow_key = pygame.transform.scale(pygame.image.load('assets/images/keycards/key_yellow.png'), (60, 100))
+blue_door = pygame.transform.scale(pygame.image.load('assets/images/portals/blue.png'), (100, 100))
+green_door = pygame.transform.scale(pygame.image.load('assets/images/portals/green.png'), (100, 100))
+red_door = pygame.transform.scale(pygame.image.load('assets/images/portals/red.png'), (100, 100))
+yellow_door = pygame.transform.scale(pygame.image.load('assets/images/portals/yellow.png'), (100, 100))
+lock = pygame.transform.scale(pygame.image.load('assets/images/lock.png'), (60, 60))
+tiles = ['', rock, ground, platform, acid, '']
+keys = [blue_key, green_key, red_key, yellow_key]
+doors = [blue_door, green_door, red_door, yellow_door]
+frames = []
+player_scale = 14
+for _ in range(1, 5):
+    frames.append(pygame.transform.scale(pygame.image.load(f'assets/images/astronaut/{_}.png'),
+                                         (5 * player_scale, 8 * player_scale)))
+# load sounds
+pygame.mixer.init()
+pygame.mixer.music.load('assets/sounds/song2.mp3')
+pygame.mixer.music.set_volume(.2)
+pygame.mixer.music.play(-1)
+acid_sound = pygame.mixer.Sound('assets/sounds/acid.mp3')
+portal_sound = pygame.mixer.Sound('assets/sounds/fast woosh.mp3')
+end_sound = pygame.mixer.Sound('assets/sounds/victory.mp3')
+jump_sound = pygame.mixer.Sound('assets/sounds/leap.mp3')
+key_sound = pygame.mixer.Sound('assets/sounds/key_acquire.mp3')
+
+# game variables
+direction = 1  # 1 = right, -1 = left
+for _ in range(len(level)):
+    if 5 in level[_]:
+        start_pos = (_, level[_].index(5))
+player_x = start_pos[1] * 100
+player_y = start_pos[0] * 100 - (8 * player_scale - 100)
+init_x = player_x
+init_y = player_y
+counter = 0
+mode = 'idle'
+player_speed = 10
+x_change = 0
+y_change = 0
+gravity = .5
+colliding = 0
+lives = 5
+in_air = False
+jump_height = 14
+inventory = [False, False, False, False]  # blue, green, red, yellow
+enter_message = False
+win = False
+lose = False
+time = 0
+second_count = 0
+
+
+def teleport(index, active_phaz):
+    active = active_phaz
+    coords = (0, 0)
+    for q in range(len(levels[active_level])):
+        for p in range(len(levels[active_level][q])):
+            if index + 10 in levels[active_level][q][p] and q != active_phaz:
+                y_pos = p
+                x_pos = levels[active_level][q][p].index(index + 10)
+                coords = (x_pos, y_pos)
+                active = q
+    return active, coords
+
+
+# draw inventory
+def draw_inventory():
+    font = pygame.font.Font('freesansbold.ttf', 20)
+    colors = ['blue', 'green', 'red', 'yellow']
+    pygame.draw.rect(screen, 'black', [5, HEIGHT - 120, WIDTH - 10, 110], 0, 5)
+    pygame.draw.rect(screen, 'purple', [5, HEIGHT - 120, WIDTH - 10, 110], 3, 5)
+    pygame.draw.rect(screen, 'white', [8, HEIGHT - 117, 340, 104], 3, 5)
+    pygame.draw.rect(screen, 'white', [348, HEIGHT - 117, 532, 104], 3, 5)
+    pygame.draw.rect(screen, 'white', [880, HEIGHT - 117, 910, 104], 3, 5)
+    font.italic = True
+    inventory_text = font.render('Inventory:', True, 'white')
+    screen.blit(inventory_text, (14, HEIGHT - 113))
+    for q in range(4):
+        pygame.draw.rect(screen, colors[q], [10 + (80 * q), HEIGHT - 88, 70, 70], 5, 5)
+        if inventory[q]:
+            scaled_key = pygame.transform.scale(keys[q], (40, 70))
+            screen.blit(scaled_key, (25 + (80 * q), HEIGHT - 88))
+    font = pygame.font.Font('freesansbold.ttf', 32)
+    level_text = font.render(f'Level: {active_level + 1}', True, 'white')
+    screen.blit(level_text, (354, HEIGHT - 110))
+    phase_strings = ['Blue', 'Green', 'Red', 'Gold']
+    phase_text = font.render(f'Phase: {phase_strings[active_phase]}', True, colors[active_phase])
+    screen.blit(phase_text, (354, HEIGHT - 80))
+    lives_text = font.render(f'Lives: {lives}', True, 'green')
+    screen.blit(lives_text, (354, HEIGHT - 50))
+    time_text = font.render(f'Elapsed Time:', True, 'white')
+    time_text2 = font.render(f'{time * 2.5} seconds', True, 'white')
+    screen.blit(time_text, (600, HEIGHT - 110))
+    screen.blit(time_text2, (600, HEIGHT - 80))
+
+    if enter_message:
+        font = pygame.font.Font('freesansbold.ttf', 44)
+        enter_text = font.render('Press Enter to Go Through Portal!', True, 'white')
+        screen.blit(enter_text, (900, HEIGHT - 90))
+    else:
+        font = pygame.font.Font('freesansbold.ttf', 44)
+        enter_text = font.render('Collect Keys and Get To The Gold Door!!', True, 'white')
+        screen.blit(enter_text, (900, HEIGHT - 90))
+
+
+# draw astronaut
+def draw_player(count, direc, mod):
+    if mod != 'idle':
+        if direc == 1:
+            screen.blit(frames[count // 5], (player_x, player_y))
+        else:
+            screen.blit(pygame.transform.flip(frames[count // 5], True, False), (player_x, player_y))
+    else:
+        if direc == 1:
+            screen.blit(frames[0], (player_x, player_y))
+        else:
+            screen.blit(pygame.transform.flip(frames[0], True, False), (player_x, player_y))
+
+
+# draw board
+def draw_board(board):
+    # below ground - 1, walkable ground - 2, platform - 3, acid - 4, 5 - spawn  point, 6-9 keys, 10-13 portals
+    acids = []
+    for q in range(len(board)):
+        for j in range(len(board[q])):
+            if board[q][j] != 0:
+                value = board[q][j]
+                if 0 < value < 4:
+                    screen.blit(tiles[value], (j * TILE_SIZE, q * TILE_SIZE))
+                elif value == 4:
+                    screen.blit(tiles[value], (j * TILE_SIZE, q * TILE_SIZE + 75))
+                    acids.append(pygame.rect.Rect((j * TILE_SIZE, q * TILE_SIZE), (100, 25)))
+                elif 6 <= value < 10:
+                    if not inventory[value - 6]:
+                        screen.blit(keys[value - 6], (j * TILE_SIZE + 20, q * TILE_SIZE))
+                elif 10 <= value:
+                    screen.blit(doors[value - 10], (j * TILE_SIZE, q * TILE_SIZE))
+                    if not inventory[value - 10]:
+                        screen.blit(lock, (j * TILE_SIZE + 20, q * TILE_SIZE + 20))
+    return acids
+
+
+# check for player collisions
+def check_collisions():
+    global level, inventory
+    right_coord = int((player_x + 60) // 100)
+    left_coord = int(player_x // 100)
+    top_coord = int((player_y + 30) // 100)
+    bot_coord = int((player_y + 80) // 100)
+    top_right = level[top_coord][right_coord]
+    bot_right = level[bot_coord][right_coord]
+    top_left = level[top_coord][left_coord]
+    bot_left = level[bot_coord][left_coord]
+    if top_coord >= 0:
+        if 0 < top_right < 4 or 0 < bot_right < 4:
+            collide = 1
+        elif 0 < top_left < 4 or 0 < bot_left < 4:
+            collide = -1
+        else:
+            collide = 0
+    elif bot_coord >= 0:
+        if 0 < bot_right < 4:
+            collide = 1
+        elif 0 < bot_left < 4:
+            collide = -1
+        else:
+            collide = 0
+    else:
+        collide = 0
+
+    if 6 <= top_left <= 9:
+        if not inventory[top_left - 6]:
+            inventory[top_left - 6] = True
+            # level[top_coord][left_coord] = 0
+            key_sound.play()
+    elif 6 <= top_right <= 9:
+        if not inventory[top_right - 6]:
+            key_sound.play()
+            inventory[top_right - 6] = True
+            # level[top_coord][right_coord] = 0
+
+    elif 6 <= bot_left <= 9:
+        if not inventory[bot_left - 6]:
+            inventory[bot_left - 6] = True
+            # level[bot_coord][left_coord] = 0
+            key_sound.play()
+    elif 6 <= bot_right <= 9:
+        if not inventory[bot_right - 6]:
+            inventory[bot_right - 6] = True
+            # level[bot_coord][right_coord] = 0
+            key_sound.play()
+
+    doorways = [False, False, False, False]
+    if 10 <= top_left <= 13:
+        if inventory[top_left - 10]:
+            doorways[top_left - 10] = True
+    elif 10 <= top_right <= 13:
+        if inventory[top_right - 10]:
+            doorways[top_right - 10] = True
+    elif 10 <= bot_left <= 13:
+        if inventory[bot_left - 10]:
+            doorways[bot_left - 10] = True
+    elif 10 <= bot_right <= 13:
+        if inventory[bot_right - 10]:
+            doorways[bot_right - 10] = True
+
+    return collide, doorways
+
+
+# check feet collision on landings
+def check_verticals():
+    global player_y
+    center_coord = int((player_x + 30) // 100)
+    bot_coord = int((player_y + 110) // 100)
+    if player_y + 110 > 0:
+        if 0 < level[bot_coord][center_coord] < 4:
+            falling = False
+        else:
+            falling = True
+    else:
+        falling = True
+    if not falling:
+        player_y = (bot_coord - 1) * 100 - 10
+    return falling
+
+
+def print_end(win_or_lose):
+    global counter
+    pygame.draw.rect(screen, 'black', [50, 50, WIDTH - 100, HEIGHT - 100], 0, 10)
+    pygame.draw.rect(screen, 'white', [50, 50, WIDTH - 100, HEIGHT - 100], 10, 10)
+    frame = frames[counter // 5]
+    # Y
+    screen.blit(frame, (70, 70))
+    screen.blit(frame, (120, 170))
+    screen.blit(frame, (170, 270))
+    screen.blit(frame, (220, 170))
+    screen.blit(frame, (270, 70))
+    screen.blit(frame, (170, 370))
+    # O
+    screen.blit(frame, (450, 70))
+    screen.blit(frame, (400, 170))
+    screen.blit(frame, (400, 270))
+    screen.blit(frame, (450, 370))
+    screen.blit(frame, (500, 70))
+    screen.blit(frame, (550, 170))
+    screen.blit(frame, (550, 270))
+    screen.blit(frame, (500, 370))
+    # U
+    screen.blit(frame, (650, 70))
+    screen.blit(frame, (650, 170))
+    screen.blit(frame, (650, 270))
+    screen.blit(frame, (700, 370))
+    screen.blit(frame, (800, 170))
+    screen.blit(frame, (800, 270))
+    screen.blit(frame, (800, 70))
+    screen.blit(frame, (750, 370))
+    font = pygame.font.Font('freesansbold.ttf', 380)
+    win_text = font.render(win_or_lose, True, 'white')
+    screen.blit(win_text, (100, 500))
+    font = pygame.font.Font('freesansbold.ttf', 100)
+    win_text2 = font.render(f'Your Time: {time * 2.5}', True, 'white')
+    screen.blit(win_text2, (950, 100))
+    win_text2 = font.render(f'Enter to Restart', True, 'white')
+    screen.blit(win_text2, (950, 300))
+
+
+# main game loop
+run = True
+while run:
+    timer.tick(fps)
+    screen.fill('black')
+    screen.blit(bg, (0, 0))
+    if counter < 18:
+        counter += 1
+    else:
+        counter = 1
+    if not win and not lose:
+        if second_count < 59:
+            second_count += 1
+        else:
+            second_count = 0
+            time += 1
+    if lives > 0:
+        lose = False
+    else:
+        lose = True
+
+    # draw board tiles
+    acid_list = draw_board(level)
+    # draw player
+    draw_player(counter, direction, mode)
+    # draw inventory
+    draw_inventory()
+    if win:
+        print_end('WIN!')
+        end_sound.play(1)
+    elif lose:
+        print_end('LOSE!')
+        end_sound.play(1)
+    # handle x-direction movement
+    if mode == 'walk':
+        if direction == -1 and player_x > 0 and colliding != -1:
+            player_x -= player_speed
+        elif direction == 1 and player_x < WIDTH - 70 and colliding != 1:
+            player_x += player_speed
+    colliding, door_collisions = check_collisions()
+
+    # jumping code
+    if in_air:
+        y_change -= gravity
+        player_y -= y_change
+    in_air = check_verticals()
+    if not in_air:
+        y_change = 0
+
+    # event handling
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            run = False
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_LEFT:
+                direction = -1
+                mode = 'walk'
+            if event.key == pygame.K_RIGHT:
+                direction = 1
+                mode = 'walk'
+            if event.key == pygame.K_SPACE and not in_air:
+                in_air = True
+                y_change = jump_height
+                jump_sound.play()
+        elif event.type == pygame.KEYUP:
+            if event.key == pygame.K_LEFT and direction == -1:
+                mode = 'idle'
+            if event.key == pygame.K_RIGHT and direction == 1:
+                mode = 'idle'
+            if not win and not lose:
+                if enter_message and event.key == pygame.K_RETURN:
+                    for i in range(len(door_collisions)):
+                        if door_collisions[i]:
+                            if i != 3:
+                                active_phase, player_coords = teleport(i, active_phase)
+                                acid_list = []
+                                player_x = player_coords[0] * 100
+                                player_y = player_coords[1] * 100 - (8 * player_scale - 100)
+                                level = levels[active_level][active_phase]
+                                init_x = player_x
+                                init_y = player_y
+                                y_change = 0
+                                portal_sound.play()
+                            else:
+                                if active_level < len(levels) - 1:
+                                    active_level += 1
+                                    portal_sound.play()
+                                    key_sound.play(active_level)
+                                else:
+                                    win = True
+                                level = levels[active_level][active_phase]
+                                inventory = [False, False, False, False]
+                                for _ in range(len(level)):
+                                    if 5 in level[_]:
+                                        start_pos = (_, level[_].index(5))
+                                player_x = start_pos[1] * 100
+                                player_y = start_pos[0] * 100 - (8 * player_scale - 100)
+                                init_x = player_x
+                                init_y = player_y
+                                y_change = 0
+            elif win or lose:
+                active_level = 0
+                active_phase = 3
+                win = False
+                lose = False
+                time = 0
+                level = levels[active_level][active_phase]
+                inventory = [False, False, False, False]
+                for _ in range(len(level)):
+                    if 5 in level[_]:
+                        start_pos = (_, level[_].index(5))
+                player_x = start_pos[1] * 100
+                player_y = start_pos[0] * 100 - (8 * player_scale - 100)
+                init_x = player_x
+                init_y = player_y
+                y_change = 0
+                lives = 5
+                end_sound.stop()
+
+    for i in range(len(acid_list)):
+        if acid_list[i].collidepoint(player_x + 30, player_y + 20):
+            lives -= 1
+            player_x = init_x
+            player_y = init_y
+            acid_sound.play()
+
+    if True in door_collisions:
+        enter_message = True
+    else:
+        enter_message = False
+
+    pygame.display.flip()
+pygame.quit()
