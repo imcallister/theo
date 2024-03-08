@@ -43,15 +43,17 @@ class Guy(pg.sprite.Sprite):
     def move_right(self):
         current_x = self.rect.x
         self.rect.x = current_x + 20
-
-def draw_window():
-    SCREEN.fill(BLACK)
-    SCREEN.blit(bg, (0,0))
-    all_sprites_list.draw(SCREEN)
-    if walk_count + 1 >= 40:
-        walk_count = 0
-    pg.display.flip()
     
+    def draw_window(self):
+        SCREEN.fill(BLACK)
+        SCREEN.blit(bg, (0,0))
+        all_sprites_list.draw(SCREEN)
+        if self.walk_count + 1 >= 40:
+            self.walk_count = 0
+        pg.display.flip()
+    
+
+
 
 def main():
     pg.init()
@@ -79,11 +81,11 @@ def main():
         elif rkey_down == True:
             guy1.move_right()        
             right = True
-            Left = False
+            left = False
         else:
             right = False
             left = False
-            walk_count = 0
+            guy1.walk_count = 0
         for event in pg.event.get():
             
             if event.type == pg.KEYDOWN and event.key == pg.K_q:
@@ -100,5 +102,5 @@ def main():
 
             if event.type == pg.KEYUP and event.key == pg.K_RIGHT:
                 rkey_down = False
-draw_window   
+    guy1.draw_window()
 main()
