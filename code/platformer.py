@@ -19,7 +19,6 @@ clock = pg.time.Clock()
 
 class Guy(pg.sprite.Sprite):
 
-
     speed = 0
     
     def __init__(self, color, width, height, start_x, start_y):
@@ -28,28 +27,53 @@ class Guy(pg.sprite.Sprite):
         
         self.left = False
         self.right = False
+        self.jumping = False
         self.walk_count = 0
 
-        self.image = pg.Surface([width, height])
-        self.image.fill(color)
+        self.image = char
         self.rect = self.image.get_rect()
         self.rect.x = start_x
         self.rect.y = start_y
 
     def move_left(self):
         current_x = self.rect.x
-        self.rect.x = current_x - 20
+        self.rect.x = current_x - 1
+
+        self.left = True
+        self.right = False
 
     def move_right(self):
         current_x = self.rect.x
-        self.rect.x = current_x + 20
+        self.rect.x = current_x + 1
+        
+        self.right = True
+        self.left = False
+
+    def not_moving(self):
+        self.right = False
+        self.left = False
+        
     
     def draw_window(self):
         SCREEN.fill(BLACK)
         SCREEN.blit(bg, (0,0))
         all_sprites_list.draw(SCREEN)
-        if self.walk_count + 1 >= 40:
+       
+        if self.left == True or self.right == True:
+            self.walk_count = self.walk_count + 1
+       
+        if self.walk_count + 1 >= 26:
             self.walk_count = 0
+
+        if self.left:
+            self.image = walk_left[self.walk_count //3]
+        
+        if self.right:
+            self.image = walk_right[self.walk_count //3]
+
+        if self.right == False and self.left == False:
+            self.image = char
+            
         pg.display.flip()
     
 
@@ -76,16 +100,14 @@ def main():
     while guy_alive:
         if lkey_down == True:
             guy1.move_left()
-            left = True
-            right = False
+            
         elif rkey_down == True:
-            guy1.move_right()        
-            right = True
-            left = False
+            guy1.move_right()
+
         else:
-            right = False
-            left = False
+            guy1.not_moving()
             guy1.walk_count = 0
+
         for event in pg.event.get():
             
             if event.type == pg.KEYDOWN and event.key == pg.K_q:
@@ -102,5 +124,11 @@ def main():
 
             if event.type == pg.KEYUP and event.key == pg.K_RIGHT:
                 rkey_down = False
-    guy1.draw_window()
+
+            if guy1.jumping == False:
+                if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
+                    guy1.jumping = True
+
+
+        guy1.draw_window()
 main()
